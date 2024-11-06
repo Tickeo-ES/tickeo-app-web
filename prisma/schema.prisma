@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model CommunityManager {
+  id          String       @id @default(uuid())
+  email       String    @unique
+  name        String
+  password    String
+  phone       Int
+  role        UserRole @default(COMMUNITY_MANAGER)
+  businesses  Business[] // Un usuario puede estar asociado a varios negocios
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Business {
+  id           String          @id @default(uuid())
+  name         String
+  accountId    String        @unique // ID de la cuenta de Stripe
+  ownerId      String           // Relación con el propietario del negocio
+  owner        CommunityManager          @relation(fields: [ownerId], references: [id])
+  tickets      Ticket[]      // Un negocio tiene varios tickets
+  //transactions Transaction[] // Relación con las transacciones realizadas para los tickets
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Ticket {
+  id          Int           @id @default(autoincrement())
+  name        String
+  description String
+  price       Float
+  quantity    Int
+  businessId  String           // Relación con el negocio que ofrece el ticket
+  business    Business      @relation(fields: [businessId], references: [id])
+  transactions Transaction[] // Relación con las transacciones de compra de este ticket
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+model Transaction {
+  id          Int           @id @default(autoincrement())
+  ticketId    Int           // Relación con el ticket comprado
+  ticket      Ticket        @relation(fields: [ticketId], references: [id])
+  buyerId     Int           // Relación con el usuario que compra el ticket
+  //buyer       User          @relation(fields: [buyerId], references: [id])
+  qrCode      String        // Código QR para redimir el ticket
+  status      TransactionStatus
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Analytics {
+  id           Int           @id @default(autoincrement())
+  ticketId     Int           // Relación con el ticket
+ // ticket       Ticket        @relation(fields: [ticketId], references: [id])
+  views        Int           @default(0) // Número de veces que se ha visto el ticket
+  sales        Int           @default(0) // Número de ventas realizadas
+  redemptions  Int           @default(0) // Número de tickets redimidos
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+
+enum UserRole {
+  ADMIN
+  COMMUNITY_MANAGER
+  BUSINESS_OWNER
+  CUSTOMER
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  REDEEMED
+  CANCELLED
+}
+
+
